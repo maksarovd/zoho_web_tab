@@ -16,13 +16,13 @@ class TokenController extends Controller
      *
      *
      * @access public
-     * @param TokenValidateRequest $requesst
+     * @param TokenValidateRequest $request
      * @param ZohoApi $zohoApi
      * @return bool
      */
-    public function initializeToken(TokenValidateRequest $requesst, ZohoApi $zohoApi): bool
+    public function initializeToken(TokenValidateRequest $request, ZohoApi $zohoApi): bool
     {
-        return $zohoApi->storeToken($requesst);
+        return $zohoApi->storeToken($request);
     }
 
 

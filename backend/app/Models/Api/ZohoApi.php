@@ -8,16 +8,16 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
 {
 
     /**
-     * Get Accounts
+     * Get Organizations
      *
      *
      * @access public
      * @return array
      * @throws \Exception
      */
-    public function getAccounts(): array
+    public function getOrganizations(): array
     {
-        $url = (string) ZohoApiConstraints::ZOHO_API_ENDPOINT_GET_ACCOUNTS;
+        $url = (string) ZohoApiConstraints::ZOHO_GET_INVENTORY_ORGANIZATIONS;
 
         $headers = [
             'Content-Type: application/json',
@@ -26,38 +26,134 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
 
         $response = $this->get($url, $headers, null);
 
-        return (array) $response['data'];
+        return (array) $response['organizations'];
     }
 
 
+
     /**
-     * Get Stages
+     * Get Contacts
      *
      *
      * @access public
      * @return array
+     * @throws \Exception
      */
-    public function getStages(): array
+    public function getContacts(): array
     {
-        #p.s. not founded endpoint for stages..
+        $url = (string) ZohoApiConstraints::ZOHO_GET_INVENTORY_CONTACTS . '?organization_id=' . $this->getOrganizationId();
 
-        return (array) [
-            'Оценка пригодности',
-            'Требуется анализ',
-            'Ценностное предложение',
-            'Идентификация ответственных за принятие решений',
-            'Коммерческое предложение/Ценовое предложение',
-            'Переговоры /Оценка',
-            'Закрытые заключенные',
-            'Закрытые упущенные',
-            'Закрытые и выигранные конкурентами',
-            'Identify Decision Makers'
+        $headers = [
+            'Content-Type: application/json',
+            'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
         ];
+
+        $response = $this->get($url, $headers, null);
+
+
+        foreach($response['contacts'] as $iteration  => $contact){
+            if($contact['contact_type'] == 'vendor'){
+                unset($response['contacts'][$iteration]);
+            }
+        }
+
+        return (array) $response['contacts'];
+    }
+
+
+
+
+    /**
+     * Get Vendors
+     *
+     *
+     * @access public
+     * @return array
+     * @throws \Exception
+     */
+    public function getVendors(): array
+    {
+        $url = (string) ZohoApiConstraints::ZOHO_GET_VENDORS . '?organization_id=' . $this->getOrganizationId();
+
+        $headers = [
+            'Content-Type: application/json',
+            'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
+        ];
+
+        $response = $this->get($url, $headers, null);
+
+
+        return (array) $response['contacts'];
+    }
+
+
+
+
+    /**
+     * Get Line Items
+     *
+     *
+     * @scope ZohoInventory.items.READ
+     * @access public
+     * @return array
+     * @throws \Exception
+     */
+    public function getLineItems(): array
+    {
+        $url = (string) ZohoApiConstraints::ZOHO_GET_INVENTORY_LINE_ITEMS . '?organization_id=' . $this->getOrganizationId();
+
+        $headers = [
+            'Content-Type: application/json',
+            'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
+        ];
+
+        $response = $this->get($url, $headers, null);
+
+        $replace = [];
+        foreach($response['items'] as $iteration => $item){
+            $replace['items'][$item['item_id']] = $item;
+        }
+
+        return (array) $replace['items'];
     }
 
 
     /**
-     * Store Account
+     * Create Sales Order
+     *
+     *
+     * @access public
+     * @param $request
+     * @return string
+     * @throws \Exception
+     */
+    public function createSalesOrder($request): string
+    {
+        $url = (string) ZohoApiConstraints::ZOHO_POST_SALES_ORDER . '?organization_id=' . $this->getOrganizationId();
+
+        $headers = (array) [
+            'Content-Type: application/json',
+            'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
+        ];
+
+        $orderId = $this->getNewOrderId();
+
+        $params = (string) json_encode([
+            'customer_id'       => (string) $request->get('customer_id'),
+            'date'              => (string) $request->get('date'),
+            'salesorder_number' => (string) $orderId,
+            'line_items'        => (array)  $request->get('line_items'),
+        ]);
+
+        $response = $this->post($url, $headers, $params);
+
+        return $orderId;
+    }
+
+
+
+    /**
+     * Create Purchaice
      *
      *
      * @access public
@@ -65,24 +161,21 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
      * @return bool
      * @throws \Exception
      */
-    public function storeAccount($request): bool
+    public function createPurchaice($request): bool
     {
-        $url = (string) ZohoApiConstraints::ZOHO_API_ENDPOINT_STORE_ACCOUNT;
+        $url = (string) ZohoApiConstraints::ZOHO_POST_PURCHAISE_ORDER . '?organization_id=' . $this->getOrganizationId();
 
         $headers = (array) [
             'Content-Type: application/json',
             'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
         ];
 
+        $order = $this->getNewPurchaiceOrderId();
+
         $params = (string) json_encode([
-            'data' => [
-                [
-                    'Account_Name' => (string) $request->get('Account_Name'),
-                    'Website'      => (string) $request->get('Website'),
-                    'Phone'        => (string) $request->get('Phone'),
-                    'Billing_City' => (string) $request->get('Billing_City'),
-                ]
-            ]
+            'purchaseorder_number' => (string) $order,
+            'vendor_id'            => (string) $request->get('vendor_id'),
+            'line_items'           => (array)  $request->get('line_items'),
         ]);
 
         $response = $this->post($url, $headers, $params);
@@ -91,8 +184,157 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
     }
 
 
+
     /**
-     * Store Deal
+     * Get Sales Orders
+     *
+     *
+     * @scope ZohoInventory.salesorders.READ
+     * @access public
+     * @return array
+     * @throws \Exception
+     */
+    public function getSalesOrders(): array
+    {
+        $url = (string) ZohoApiConstraints::ZOHO_POST_SALES_ORDER . '?organization_id=' . $this->getOrganizationId();
+
+        $headers = [
+            'Content-Type: application/json',
+            'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
+        ];
+
+        $response = $this->get($url, $headers, null);
+
+
+        return (array) $response['salesorders'];
+    }
+
+
+    /**
+     * Get Purchaice Orders
+     *
+     *
+     * @scope ZohoInventory.salesorders.READ
+     * @access public
+     * @return array
+     * @throws \Exception
+     */
+    public function getPurchaiceOrders(): array
+    {
+        $url = (string) ZohoApiConstraints::ZOHO_POST_PURCHAISE_ORDER . '?organization_id=' . $this->getOrganizationId();
+
+        $headers = [
+            'Content-Type: application/json',
+            'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
+        ];
+
+        $response = $this->get($url, $headers, null);
+
+
+        return (array) $response['purchaseorders'];
+    }
+
+
+    /**
+     * Get New Order Id
+     *
+     *
+     * @access public
+     * @return string
+     * @throws \Exception
+     */
+    public function getNewOrderId(): string
+    {
+        $orders = $this->getSalesOrders();
+
+        $prefix  = "SO-";
+        $number  = "00001";
+
+        if(!count($orders)){
+            return $prefix . $number;
+        }
+
+
+        $lastOrderNumber = str_replace($prefix,'', $orders[0]['salesorder_number']);
+
+
+        return  $prefix . sprintf('%05d', $lastOrderNumber + 1);
+    }
+
+
+
+    /**
+     * Get New Purchaice Order Id
+     *
+     *
+     * @access public
+     * @return string
+     * @throws \Exception
+     */
+    public function getNewPurchaiceOrderId(): string
+    {
+        $orders = $this->getPurchaiceOrders();
+
+        $prefix  = "PO-";
+        $number  = "00001";
+
+        if(!count($orders)){
+            return $prefix . $number;
+        }
+
+
+        $lastOrderNumber = str_replace($prefix,'', $orders[0]['purchaseorder_number']);
+
+
+        return  $prefix . sprintf('%05d', $lastOrderNumber + 1);
+    }
+
+//{
+//    "customer_id":"614440000000054068",
+//    "contact_persons":[],
+//    "date":"2024-07-24",
+//    "shipment_date":"",
+//    "custom_fields":[],
+//   "is_inclusive_tax":false,
+//   "line_items":[
+//       {"item_order":1,
+//        "item_id":"614440000000051257",
+//        "rate":110,
+//        "name":"Cats Food",
+//         "description":"",
+//          "quantity":"1.00",
+//          "discount":"0%",
+//          "tax_id":"",
+//           "tags":[],
+//          "item_custom_fields":[],
+//          "unit":"g"}
+//          ],
+//   "notes":"",
+//   "terms":"",
+//   "discount":0,
+//  "is_discount_before_tax":true,
+//  "discount_type":"entity_level",
+// "adjustment_description":"Adjustment",
+//"pricebook_id":"",
+// "template_id":"614440000000000111",
+// "documents":[],
+// "shipping_address_id":"614440000000054072",
+// "billing_address_id":"614440000000054070",
+// "zcrm_potential_id":"",
+//"zcrm_potential_name":"",
+//"payment_terms":0,
+//"payment_terms_label":"Due on Receipt",
+//"is_adv_tracking_in_package":false,
+//"tax_override_preference":"no_override",
+//"tds_override_preference":"no_override"
+//}
+
+
+
+
+
+    /**
+     * Create Contact
      *
      *
      * @access public
@@ -100,9 +342,9 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
      * @return bool
      * @throws \Exception
      */
-    public function storeDeal($request): bool
+    public function createContact($request): bool
     {
-        $url = (string) ZohoApiConstraints::ZOHO_API_ENDPOINT_STORE_DEALS;
+        $url = (string) ZohoApiConstraints::ZOHO_GET_INVENTORY_CONTACTS . '?organization_id=' . $this->getOrganizationId();
 
         $headers = (array) [
             'Content-Type: application/json',
@@ -110,21 +352,15 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
         ];
 
         $params = (string) json_encode([
-            'data' => [
-                [
-                    'Deal_Name'    => (string) $request->get('Deal_Name'),
-                    'Stage'        => (string) $request->get('Stage'),
-                    'Amount'       => (string) $request->get('Amount'),
-                    'Closing_Date' => (string) $request->get('Closing_Date'),
-                    'Account_Name' => (array)  $request->get('Account_Name')
-                ]
-            ]
+            'contact_name' => (string) $request->get('contact_name'),
+            'contact_type' => (string) 'customer'
         ]);
 
         $response = $this->post($url, $headers, $params);
 
         return true;
     }
+
 
 
     /**
@@ -152,6 +388,7 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
         $response = $this->post($url, $headers, $params);
 
         $redis = (object) Redis::connection();
+        $redis->set('zoho_organization_id', $request->get('organization_id'));
         $redis->set('zoho_access_token', $response['access_token']);
         $redis->set('zoho_refresh_token', $response['refresh_token']);
         $redis->set('zoho_client_id', $request->get('client_id'));
@@ -240,6 +477,24 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
         }
 
         return (string) $token;
+    }
+
+
+    /**
+     * Get Organization Id
+     *
+     *
+     * @access protected
+     * @return mixed
+     * @throws \Exception
+     */
+    protected function getOrganizationId()
+    {
+        if($this->checkToken()){
+            return Redis::connection()->get('zoho_organization_id');
+        }
+
+        throw new \Exception('Token not Exist');
     }
 
 

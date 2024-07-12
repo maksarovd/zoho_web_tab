@@ -22,11 +22,12 @@ class TokenValidateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'client_id'     => 'required|string',
-            'client_secret' => 'required|string',
-            'code'          => 'required|string',
-            'grant_type'    => 'required|string',
-            'redirect_uri'  => 'required|string',
+            'client_id'       => 'required|string',
+            'client_secret'   => 'required|string',
+            'code'            => 'required|string',
+            'grant_type'      => 'required|string',
+            'redirect_uri'    => 'required|string',
+            'organization_id' => 'required|string',
         ];
     }
 }
