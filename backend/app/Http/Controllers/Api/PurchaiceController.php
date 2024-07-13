@@ -17,11 +17,11 @@ class PurchaiceController extends Controller
      *
      * @access public
      * @param ZohoApi $zohoApi
-     * @return bool
+     * @return string
      */
-    public function createPurchaice(Request $request, ZohoApi $zohoApi): bool
+    public function createPurchaice(Request $request, ZohoApi $zohoApi): string
     {
-        return  $zohoApi->createPurchaice($request);
+        return json_encode(['purchaseorder_number' => $zohoApi->createPurchaice($request)]);
     }
 
 }

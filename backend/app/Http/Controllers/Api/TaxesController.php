@@ -8,21 +8,22 @@ use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 
 
-class OrderController extends Controller
+class TaxesController extends Controller
 {
 
 
     /**
-     * Create Sales Order
+     * Get Taxes
      *
      *
      * @access public
      * @param ZohoApi $zohoApi
-     * @return string
+     * @return Collection
      */
-    public function createSalesOrder(Request $request, ZohoApi $zohoApi): string
+    public function getTaxes(ZohoApi $zohoApi): Collection
     {
-        return json_encode(['salesorder_number' => $zohoApi->createSalesOrder($request)]);
+        return collect($zohoApi->getTaxes());
     }
+
 
 }

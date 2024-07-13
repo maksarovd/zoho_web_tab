@@ -56,11 +56,12 @@
 
                 <div class="col-md-6">
                     <label class="form-label">{{$t('Select Customer')}}</label>
-                    <Field name="customer_id" >
-                        <select v-model="selected.contact" class="form-select form-select-sm mb-3" aria-label=".form-select-lg example" name="contact_name">
+
+
+                        <Field as="select" v-model="selected.contact" class="form-select form-select-sm mb-3" aria-label=".form-select-lg example" name="customer_id">
                             <option v-for="contact in arrays.contacts" :value="contact.contact_id" :key="contact.contact_id" >{{ contact.contact_name }}</option>
-                        </select>
-                        <ErrorMessage name="contact_name" style="color: red"/>
+                            <ErrorMessage name="customer_id" style="color: red"/>
+                        </Field>
                         <div class="form-text"><button type="button" class="btn btn-warning btn-sm"  data-bs-toggle="modal" data-bs-target="#staticBackdrop">{{ $t('Or Add new customer')}}</button></div>
 
 
@@ -74,7 +75,7 @@
                                     <div class="modal-body">
                                         <div class="mb-3">
                                             <label class="form-label">Customer name</label>
-                                            <input type="name" class="form-control contact_name"  placeholder="add new customer">
+                                            <input type="name" class="form-control contact_name"  placeholder="add new customer" required>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -85,25 +86,7 @@
                             </div>
                         </div>
 
-
-
-
-
-
-                    </Field>
                 </div>
-
-
-                <div class="col-md-6">
-                    <label class="form-label">{{$t('Select Items')}}</label>
-                    <Field name="line_items" >
-                        <select v-model="selected.lineItem" class="form-select form-select-sm mb-3" aria-label=".form-select-lg example" name="line_items" @click="appendRow">
-                            <option v-for="line_item in arrays.line_items" :value="line_item" :key="line_item.item_id">{{ line_item.name }}</option>
-                        </select>
-                        <ErrorMessage name="line_items" style="color: red"/>
-                    </Field>
-                </div>
-
 
                 <div class="col-md-6">
                     <label class="form-label">{{$t('Date Added')}}</label>
@@ -111,6 +94,54 @@
                     <ErrorMessage name="date" style="color: red"/>
                 </div>
 
+
+                <div class="col-md-12 mt-4">
+
+
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th scope="col-12">Item Details</th>
+                            <th scope="col">Quantity</th>
+                            <th scope="col">Rate</th>
+                            <th scope="col">Tax</th>
+                            <th scope="col">Amount</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="(item, index) in arrays.items" :value="item" :key="item" class="line_items">
+                            <td>
+                                <select class="form-select form-select-sm mb-3" aria-label=".form-select-lg example" @click="handleAddColumn(index)">
+                                    <option selected></option>
+                                    <option v-for="line_item in arrays.line_items" :value="line_item.rate" :key="line_item.item_id" >{{ line_item.name }}</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number"  name="quantity" :value="item.quantity" class="form-control" @click="calculateAmount(index)"/>
+                            </td>
+                            <td>
+                                <input type="number" name="rate" class="form-control" :value="item.rate" @click="calculateAmount(index)"/>
+                            </td>
+                            <td>
+                                <select name="tax" class="form-select form-select-sm mb-3" aria-label=".form-select-lg example" @click="calculateAmount(index)">
+                                    <option selected></option>
+                                    <option v-for="tax in arrays.taxes" :value="tax.tax_id" :key="tax.tax_id" >{{ tax.tax_name }}</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" name="amount" class="form-control" value="0.0"  disabled/>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-light" @click="handleDelColumn(index)">x</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+
+
+                </div>
 
                 <div v-show="show.order" class="mt-3">
 
@@ -143,10 +174,8 @@
 
             <div class="col-md-6">
                 <label class="form-label">{{$t('Select vendor')}}</label>
-                <Field name="vendor_id" >
-                    <select v-model="selected.vendor" class="form-select form-select-sm mb-3" aria-label=".form-select-lg example" name="vendor_id">
-                        <option v-for="vendor in arrays.vendors" :value="vendor" :key="vendor.contact_id">{{ vendor.contact_name }}</option>
-                    </select>
+                <Field as="select" v-model="selected.vendor" class="form-select form-select-sm mb-3" aria-label=".form-select-lg example" name="vendor_id">
+                    <option v-for="vendor in arrays.vendors" :value="vendor.contact_id" :key="vendor.contact_id">{{ vendor.contact_name }}</option>
                     <ErrorMessage name="vendor_id" style="color: red"/>
                 </Field>
             </div>
@@ -227,8 +256,13 @@
 
                 arrays: {
                     vendors: [],
+                    taxes: [],
                     contacts: [],
                     line_items: [],
+                    items: [{
+                        'rate':0.0,
+                        'quantity': 1
+                    }],
                 },
 
                 purchaice: {
@@ -240,6 +274,7 @@
         mounted() {
 
             this.initialize();
+
         },
 
         components: {
@@ -267,6 +302,7 @@
                     '&access_type=offline'+
                     '&prompt=consent';
             },
+
         },
 
         methods: {
@@ -284,6 +320,7 @@
                                 self.getContacts();
                                 self.getLineItems();
                                 self.getVendors();
+                                self.getTaxes();
                             }
                         });
 
@@ -310,6 +347,7 @@
                                 self.getContacts();
                                 self.getLineItems();
                                 self.getVendors();
+                                self.getTaxes();
                             }
                         });
                 } catch (error) {
@@ -353,6 +391,21 @@
             },
 
 
+            async getTaxes(){
+                try {
+                    const response = await axios.get('http://127.0.0.1/api/v2/zoho/get_taxes');
+                    this.arrays.taxes = response.data;
+                } catch (error) {
+                    Swal.fire({
+                        title: 'Ошибка при загрузке данных: /api/v2/zoho/get_taxes',
+                        text: error,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+
+
             async getLineItems(){
                 try {
                     const response = await axios.get('http://127.0.0.1/api/v2/zoho/get_line_items');
@@ -370,7 +423,6 @@
 
             async createOrder(formData){
 
-                formData.customer_id = this.selected.contact;
                 formData.line_items = [];
                 var vary = this.arrays.line_items;
                 var out_stacks = [];
@@ -417,15 +469,16 @@
 
                 try {
                     await axios.post('http://127.0.0.1/api/v2/zoho/salesorders', formData)
-                        .then(() => {
+                        .then((response) => {
                             Swal.fire({
-                                title: 'order placed successfully!',
+                                title: 'order '+response.data.salesorder_number+' placed successfully!',
                                 icon: 'success',
                                 confirmButtonText: 'OK'
                             });
 
-
-                            self.appendPurchaiceRow(out_stacks);
+                            if(self.show.purchaice){
+                                self.appendPurchaiceRow(out_stacks);
+                            }
                         });
 
                 } catch (error) {
@@ -440,7 +493,6 @@
 
 
             async createPurchaice(formData){
-                formData.vendor_id = this.selected.vendor.contact_id;
                 formData.line_items = [];
 
                 $( ".purchaice > tr" ).each(function( index, element ) {
@@ -456,9 +508,9 @@
 
                 try {
                     await axios.post('http://127.0.0.1/api/v2/zoho/create_purchaice', formData)
-                        .then(() => {
+                        .then((response) => {
                             this.disable.purchaice = true;
-                            $('.purchaice-message').html("Purchaice order placed!")
+                            $('.purchaice-message').html('Purchaice order '+response.data.purchaseorder_number+' placed!')
                         });
                 } catch (error) {
                     Swal.fire({
@@ -502,29 +554,95 @@
             },
 
 
-            appendRow(){
-                this.show.order = true;
+            handleAddColumn(row_index){
+                var self = this;
 
 
-                let template = "" +
-                    "<tr data-item-id='prod'>" +
-                        "<td>name</td>" +
-                        "<td>rate</td>" +
-                        "<td>" +
-                            "<input type='number' value='1' min='1'/>" +
-                        "</td>" +
-                        "<td>" +
-                            "<button type='button' class='btn btn-danger' onclick=$(this).closest('tr').empty();> - </button>" +
-                        "</td>" +
-                    "</tr>";
+                $( ".line_items" ).each(function( index, element) {
+                    if(index == row_index){
+
+                        var only_last_item = ($( ".line_items" ).length == (index +1));
+
+                        var rate = $(element).find('select').val();
+
+                        if(rate && only_last_item){
+
+                            self.arrays.items[row_index].rate = rate;
+                            self.arrays.items[row_index].quantity = 1;
+
+                            self.arrays.items.push({
+                                'rate': 0.0,
+                                'quantity': 1
+                            });
+                        }
 
 
-                template = template.replace('prod', this.selected.lineItem.item_id);
-                template = template.replace('name', this.selected.lineItem.name);
-                template = template.replace('rate', this.selected.lineItem.rate);
-                template = template.replace('clean', '$(this).closest(\'tr\').empty();');
+                        if(rate && !only_last_item){
 
-                $('.sales-order').append(template);
+                            self.arrays.items[row_index].rate = rate;
+                            self.arrays.items[row_index].quantity = 1;
+
+                        }
+                    }
+                });
+            },
+
+
+            handleDelColumn(index){
+
+                this.arrays.items.splice(index, 1);
+
+                if(this.arrays.items.length == 0){
+
+                    this.arrays.items.push({});
+                }
+
+            },
+
+
+
+            calculateAmount(index){
+                let row  = $( ".line_items" )[index];
+                let qty  = $(row).find('input[name*="quantity"]').val();
+                let rate = $(row).find('input[name*="rate"]').val();
+                let tax  = $(row).find('select[name*="tax"]').val();
+                let amount = 0.0;
+                let percent = 0.0;
+
+                $.each(this.arrays.taxes, function( index, value ) {
+                    if(value.tax_id == tax){
+                        tax = value.tax_percentage ?? 0;
+                    }
+                });
+
+
+                if(!qty){
+                    qty = 0;
+                }
+                if(!rate){
+                    rate = 0;
+                }
+                if(!tax){
+                    tax = 0;
+                }
+
+
+                if(tax){
+                    percent = ((parseFloat(rate) / 100) * parseFloat(tax)) * parseInt(qty);
+                    amount = (parseFloat(rate) * parseInt(qty)) - percent;
+                }else{
+                    amount = parseFloat(rate) * parseInt(qty);
+                }
+
+
+                if(amount  < 0){
+                    amount = 0.0;
+                }
+
+
+                $(row).find('input[name*="amount"]').val(amount);
+
+                return amount;
             },
 
 

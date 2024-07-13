@@ -88,6 +88,29 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
 
 
 
+    /**
+     * Get Taxes
+     *
+     *
+     * @access public
+     * @return array
+     * @throws \Exception
+     */
+    public function getTaxes(): array
+    {
+        $url = (string) ZohoApiConstraints::ZOHO_GET_SETTINGS_TAXES . '?organization_id=' . $this->getOrganizationId();
+
+        $headers = [
+            'Content-Type: application/json',
+            'Authorization: Zoho-oauthtoken ' . $this->getOrRefreshToken()
+        ];
+
+        $response = $this->get($url, $headers, null);
+
+
+        return (array) $response['taxes'];
+    }
+
 
     /**
      * Get Line Items
@@ -158,10 +181,10 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
      *
      * @access public
      * @param $request
-     * @return bool
+     * @return string
      * @throws \Exception
      */
-    public function createPurchaice($request): bool
+    public function createPurchaice($request): string
     {
         $url = (string) ZohoApiConstraints::ZOHO_POST_PURCHAISE_ORDER . '?organization_id=' . $this->getOrganizationId();
 
@@ -180,7 +203,7 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
 
         $response = $this->post($url, $headers, $params);
 
-        return true;
+        return $order;
     }
 
 
