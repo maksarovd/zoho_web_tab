@@ -513,11 +513,16 @@ class ZohoApi extends ZohoApiAbstract implements ZohoApiConstraints
      */
     protected function getOrganizationId()
     {
-        if($this->checkToken()){
-            return Redis::connection()->get('zoho_organization_id');
+        $organizationId = Redis::connection()->get('zoho_organization_id');
+
+        if(!$organizationId){
+
+            $this->deleteToken();
+
+            throw new \Exception('Organization Id Not Set. Token Will Be Delete.');
         }
 
-        throw new \Exception('Token not Exist');
+        return $organizationId;
     }
 
 
